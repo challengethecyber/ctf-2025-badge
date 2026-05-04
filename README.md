@@ -13,3 +13,9 @@ Badge related files for CTC 2025 CTF
 - SAO
 
 See schematics: [ctc_2025.pdf](hardware/ctc_2025.pdf)
+
+## Credits
+
+ - PCB hw design by [Max Grim](https://github.com/maxgrim).
+ - Software by [c3c](https://github.com/c3c) and Max.
+ - Display driver based on [GxEPD2](https://github.com/ZinggJM/GxEPD2).
