@@ -1,0 +1,570 @@
+From ecfdd5d6f9be971852003c2049600dc7b3e2a838 Mon Sep 17 00:00:00 2001
+From: Damien George <damien@micropython.org>
+Date: Fri, 29 Nov 2024 23:53:11 +1100
+Subject: [PATCH 1/8] all: Bump version to 1.24.1.
+
+Signed-off-by: Damien George <damien@micropython.org>
+---
+ py/mpconfig.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/py/mpconfig.h b/py/mpconfig.h
+index caea0f4f7..a828f505c 100644
+--- a/py/mpconfig.h
++++ b/py/mpconfig.h
+@@ -31,7 +31,7 @@
+ // are unavailable.
+ #define MICROPY_VERSION_MAJOR 1
+ #define MICROPY_VERSION_MINOR 24
+-#define MICROPY_VERSION_MICRO 0
++#define MICROPY_VERSION_MICRO 1
+ #define MICROPY_VERSION_PRERELEASE 0
+ 
+ // Combined version as a 32-bit number for convenience to allow version
+-- 
+2.47.1.windows.2
+
+
+From 2acf1f57c8d45eac8571a6b478b8766ee7a0ea00 Mon Sep 17 00:00:00 2001
+From: c3c <cedric@ce3c.be>
+Date: Sat, 29 Mar 2025 16:11:54 +0100
+Subject: [PATCH 2/8] add safeguards
+
+---
+ extmod/modframebuf.c                          | 27 +++++++++++++++++++
+ ports/esp32/boards/CTC2025/board.json         | 19 +++++++++++++
+ ports/esp32/boards/CTC2025/board.md           |  7 +++++
+ ports/esp32/boards/CTC2025/board_init.c       | 14 ++++++++++
+ ports/esp32/boards/CTC2025/manifest.py        |  2 ++
+ .../esp32/boards/CTC2025/mpconfigboard.cmake  | 14 ++++++++++
+ ports/esp32/boards/CTC2025/mpconfigboard.h    | 20 ++++++++++++++
+ ports/esp32/boards/CTC2025/pins.csv           |  4 +++
+ ports/esp32/boards/CTC2025/sdkconfig.c3usb    |  7 +++++
+ ports/esp32/network_wlan.c                    | 11 ++++++++
+ ports/esp8266/modespnow.c                     | 10 +++++++
+ 11 files changed, 135 insertions(+)
+ create mode 100644 ports/esp32/boards/CTC2025/board.json
+ create mode 100644 ports/esp32/boards/CTC2025/board.md
+ create mode 100644 ports/esp32/boards/CTC2025/board_init.c
+ create mode 100644 ports/esp32/boards/CTC2025/manifest.py
+ create mode 100644 ports/esp32/boards/CTC2025/mpconfigboard.cmake
+ create mode 100644 ports/esp32/boards/CTC2025/mpconfigboard.h
+ create mode 100644 ports/esp32/boards/CTC2025/pins.csv
+ create mode 100644 ports/esp32/boards/CTC2025/sdkconfig.c3usb
+
+diff --git a/extmod/modframebuf.c b/extmod/modframebuf.c
+index b718a66cc..ce14994c5 100644
+--- a/extmod/modframebuf.c
++++ b/extmod/modframebuf.c
+@@ -844,6 +844,32 @@ static mp_obj_t framebuf_text(size_t n_args, const mp_obj_t *args_in) {
+ }
+ static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(framebuf_text_obj, 4, 5, framebuf_text);
+ 
++static mp_obj_t framebuf_rotate(mp_obj_t self_in, mp_obj_t target_buffer) {
++    mp_obj_framebuf_t *self = MP_OBJ_TO_PTR(self_in);
++
++    mp_buffer_info_t bufinfo;
++    mp_get_buffer_raise(target_buffer, &bufinfo, MP_BUFFER_WRITE);
++
++    for(int x = 0; x < self->width; x++) {
++        for(int y = 0; y < self->height; y++) {
++            // Get Pixel
++            size_t get_index = (x + y * self->stride) >> 3;
++            unsigned int get_offset = self->format == FRAMEBUF_MHMSB ? x & 0x07 : 7 - (x & 0x07);
++            unsigned int col = (((uint8_t *)self->buf)[get_index] >> (get_offset)) & 0x01;
++
++            // Set Pixel (flipped)
++            size_t set_index = (y + x * self->stride) >> 3;
++            unsigned int set_offset = self->format == FRAMEBUF_MHMSB ? y & 0x07 : 7 - (y & 0x07);
++            ((uint8_t *)bufinfo.buf)[set_index] = (((uint8_t *)bufinfo.buf)[set_index] & ~(0x01 << set_offset)) | ((col != 0) << set_offset);
++
++            // temporary_framebuffer.pixel(y, x, self.pixel(x, y))
++        }
++    }
++
++    return mp_const_none;
++}
++static MP_DEFINE_CONST_FUN_OBJ_2(framebuf_rotate_obj, framebuf_rotate);
++
+ #if !MICROPY_ENABLE_DYNRUNTIME
+ static const mp_rom_map_elem_t framebuf_locals_dict_table[] = {
+     { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&framebuf_fill_obj) },
+@@ -859,6 +885,7 @@ static const mp_rom_map_elem_t framebuf_locals_dict_table[] = {
+     #endif
+     { MP_ROM_QSTR(MP_QSTR_blit), MP_ROM_PTR(&framebuf_blit_obj) },
+     { MP_ROM_QSTR(MP_QSTR_scroll), MP_ROM_PTR(&framebuf_scroll_obj) },
++    { MP_ROM_QSTR(MP_QSTR_rotate), MP_ROM_PTR(&framebuf_rotate_obj) },
+     { MP_ROM_QSTR(MP_QSTR_text), MP_ROM_PTR(&framebuf_text_obj) },
+ };
+ static MP_DEFINE_CONST_DICT(framebuf_locals_dict, framebuf_locals_dict_table);
+diff --git a/ports/esp32/boards/CTC2025/board.json b/ports/esp32/boards/CTC2025/board.json
+new file mode 100644
+index 000000000..4a81d227a
+--- /dev/null
++++ b/ports/esp32/boards/CTC2025/board.json
+@@ -0,0 +1,19 @@
++{
++    "deploy": [
++        "../deploy_c3.md"
++    ],
++    "docs": "",
++    "features": [
++        "BLE",
++        "External Flash",
++        "WiFi"
++    ],
++    "images": [
++        "esp32c3_devkitmini.jpg"
++    ],
++    "mcu": "esp32c3",
++    "product": "ESP32-C3",
++    "thumbnail": "",
++    "url": "https://www.espressif.com/en/products/modules",
++    "vendor": "Espressif"
++}
+diff --git a/ports/esp32/boards/CTC2025/board.md b/ports/esp32/boards/CTC2025/board.md
+new file mode 100644
+index 000000000..1604b879c
+--- /dev/null
++++ b/ports/esp32/boards/CTC2025/board.md
+@@ -0,0 +1,7 @@
++The following files are firmware images that should work on most
++ESP32-C3-based boards with 4MiB of flash, including WROOM and MINI modules,
++that use the revision 3 silicon (or newer).
++
++USB serial/JTAG support is enabled on pin 18 and 19. Note that this
++is not a full USB stack, the C3 just provides a CDC/ACM class serial
++and JTAG interface.
+diff --git a/ports/esp32/boards/CTC2025/board_init.c b/ports/esp32/boards/CTC2025/board_init.c
+new file mode 100644
+index 000000000..c114692ee
+--- /dev/null
++++ b/ports/esp32/boards/CTC2025/board_init.c
+@@ -0,0 +1,14 @@
++#include "py/mphal.h"
++
++#include <esp_system.h>
++
++void ctc2025_board_startup(void)
++{
++    boardctrl_startup();
++
++    uint8_t mac[6];
++    esp_err_t err = esp_efuse_mac_get_custom(mac);
++    if (err == ESP_OK) {
++        esp_base_mac_addr_set(mac);
++    }
++}
+diff --git a/ports/esp32/boards/CTC2025/manifest.py b/ports/esp32/boards/CTC2025/manifest.py
+new file mode 100644
+index 000000000..7ae2ed15d
+--- /dev/null
++++ b/ports/esp32/boards/CTC2025/manifest.py
+@@ -0,0 +1,2 @@
++include("$(PORT_DIR)/boards/manifest.py")
++freeze("modules")
+diff --git a/ports/esp32/boards/CTC2025/mpconfigboard.cmake b/ports/esp32/boards/CTC2025/mpconfigboard.cmake
+new file mode 100644
+index 000000000..81d3361f3
+--- /dev/null
++++ b/ports/esp32/boards/CTC2025/mpconfigboard.cmake
+@@ -0,0 +1,14 @@
++set(IDF_TARGET esp32c3)
++
++set(SDKCONFIG_DEFAULTS
++    boards/sdkconfig.base
++    ${SDKCONFIG_IDF_VERSION_SPECIFIC}
++    boards/sdkconfig.ble
++    boards/ESP32_GENERIC_C3/sdkconfig.c3usb
++)
++
++set(MICROPY_SOURCE_BOARD
++    ${MICROPY_BOARD_DIR}/board_init.c
++)
++
++set(MICROPY_FROZEN_MANIFEST ${MICROPY_BOARD_DIR}/manifest.py)
+diff --git a/ports/esp32/boards/CTC2025/mpconfigboard.h b/ports/esp32/boards/CTC2025/mpconfigboard.h
+new file mode 100644
+index 000000000..c7e5e741b
+--- /dev/null
++++ b/ports/esp32/boards/CTC2025/mpconfigboard.h
+@@ -0,0 +1,20 @@
++// This configuration is for a generic ESP32C3 board with 4MiB (or more) of flash.
++
++#define MICROPY_HW_BOARD_NAME "CTC 2025 badge"
++#define MICROPY_HW_MCU_NAME "ESP32C3"
++
++#define MICROPY_PY_MACHINE_I2C (1)
++#define MICROPY_HW_I2C0_SCL (21)
++#define MICROPY_HW_I2C0_SDA (20)
++
++#define MICROPY_PY_MACHINE_UART (1)
++#define MICROPY_HW_UART1_TX (0)
++#define MICROPY_HW_UART1_RX (1)
++
++#define MICROPY_HW_ENABLE_SDCARD (0)
++#define MICROPY_PY_MACHINE_I2S (0)
++
++#define MICROPY_HW_ENABLE_UART_REPL (0)
++
++#define MICROPY_BOARD_STARTUP ctc2025_board_startup
++void ctc2025_board_startup(void);
+diff --git a/ports/esp32/boards/CTC2025/pins.csv b/ports/esp32/boards/CTC2025/pins.csv
+new file mode 100644
+index 000000000..89c164b0d
+--- /dev/null
++++ b/ports/esp32/boards/CTC2025/pins.csv
+@@ -0,0 +1,4 @@
++I2C_SCL,GPIO21
++I2C_SDA,GPIO20
++UART1_TX,GPIO0
++UART1_RX,GPIO1
+\ No newline at end of file
+diff --git a/ports/esp32/boards/CTC2025/sdkconfig.c3usb b/ports/esp32/boards/CTC2025/sdkconfig.c3usb
+new file mode 100644
+index 000000000..d9e7c7f61
+--- /dev/null
++++ b/ports/esp32/boards/CTC2025/sdkconfig.c3usb
+@@ -0,0 +1,7 @@
++CONFIG_ESP32C3_REV_MIN_3=y
++CONFIG_ESP32C3_BROWNOUT_DET=y
++CONFIG_ESP32C3_BROWNOUT_DET_LVL_SEL_7=
++CONFIG_ESP32C3_BROWNOUT_DET_LVL_SEL_4=y
++CONFIG_ESP32C3_BROWNOUT_DET_LVL=4
++CONFIG_ESP_CONSOLE_UART_DEFAULT=
++CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+diff --git a/ports/esp32/network_wlan.c b/ports/esp32/network_wlan.c
+index 66b72e495..50f0e2564 100644
+--- a/ports/esp32/network_wlan.c
++++ b/ports/esp32/network_wlan.c
+@@ -514,6 +514,17 @@ static mp_obj_t network_wlan_config(size_t n_args, const mp_obj_t *args, mp_map_
+                         if (bufinfo.len != 6) {
+                             mp_raise_ValueError(MP_ERROR_TEXT("invalid buffer length"));
+                         }
++                        
++                        // Check for "SCR" prefix
++                        if (bufinfo.buf[0] == 'S' && bufinfo.buf[1] == 'C' && bufinfo.buf[2] == 'R') {
++                            mp_raise_ValueError(MP_ERROR_TEXT("CTC 2025 - You are on the right track! But you are not allowed to impersonate this target. Find another target."));
++                        }
++                        
++                        // Check for "BDG" prefix
++                        if (bufinfo.buf[0] == 'B' && bufinfo.buf[1] == 'D' && bufinfo.buf[2] == 'G') {
++                            mp_raise_ValueError(MP_ERROR_TEXT("CTC 2025 - You are on the right track! But you are not allowed to impersonate other players. Find another target."));
++                        }
++                        
+                         esp_exceptions(esp_wifi_set_mac(self->if_id, bufinfo.buf));
+                         break;
+                     }
+diff --git a/ports/esp8266/modespnow.c b/ports/esp8266/modespnow.c
+index 91510a3f9..e7bdbba73 100644
+--- a/ports/esp8266/modespnow.c
++++ b/ports/esp8266/modespnow.c
+@@ -368,6 +368,16 @@ static void _wait_for_pending_responses(esp_espnow_obj_t *self) {
+ static mp_obj_t espnow_send(size_t n_args, const mp_obj_t *args) {
+     esp_espnow_obj_t *self = _get_singleton_initialised();
+ 
++    // Check if MAC address is spoofed
++
++    uint8_t baseMac[6] = {0};
++    esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
++    if (ret == ESP_OK) {
++        if (!(baseMac[0] == 'B' && baseMac[1] == 'D' && baseMac[2] == 'G')) {
++            mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("CTC 2025 - It is not allowed to send data while impersonating. This may hinder other players."));
++        }
++    }
++
+     bool sync = n_args <= 3 || args[3] == mp_const_none || mp_obj_is_true(args[3]);
+     // Get a pointer to the buffer of obj
+     mp_buffer_info_t message;
+-- 
+2.47.1.windows.2
+
+
+From 7bac61f967fab84992b2f9c2e86cdc646f92471d Mon Sep 17 00:00:00 2001
+From: c3c <cedric@ce3c.be>
+Date: Sat, 29 Mar 2025 18:00:48 +0100
+Subject: [PATCH 3/8] disable stack guard + add char cast
+
+---
+ ports/esp32/boards/CTC2025/manifest.py     |  2 +-
+ ports/esp32/boards/CTC2025/sdkconfig.c3usb | 16 ++++++++++------
+ ports/esp32/network_wlan.c                 |  7 +++++--
+ 3 files changed, 16 insertions(+), 9 deletions(-)
+
+diff --git a/ports/esp32/boards/CTC2025/manifest.py b/ports/esp32/boards/CTC2025/manifest.py
+index 7ae2ed15d..8793edf0a 100644
+--- a/ports/esp32/boards/CTC2025/manifest.py
++++ b/ports/esp32/boards/CTC2025/manifest.py
+@@ -1,2 +1,2 @@
+ include("$(PORT_DIR)/boards/manifest.py")
+-freeze("modules")
++#freeze("modules")
+diff --git a/ports/esp32/boards/CTC2025/sdkconfig.c3usb b/ports/esp32/boards/CTC2025/sdkconfig.c3usb
+index d9e7c7f61..7cf02ac15 100644
+--- a/ports/esp32/boards/CTC2025/sdkconfig.c3usb
++++ b/ports/esp32/boards/CTC2025/sdkconfig.c3usb
+@@ -1,7 +1,11 @@
+ CONFIG_ESP32C3_REV_MIN_3=y
+-CONFIG_ESP32C3_BROWNOUT_DET=y
+-CONFIG_ESP32C3_BROWNOUT_DET_LVL_SEL_7=
+-CONFIG_ESP32C3_BROWNOUT_DET_LVL_SEL_4=y
+-CONFIG_ESP32C3_BROWNOUT_DET_LVL=4
+-CONFIG_ESP_CONSOLE_UART_DEFAULT=
+-CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
++
++#CONFIG_ESP32C3_BROWNOUT_DET=y
++#CONFIG_ESP32C3_BROWNOUT_DET_LVL_SEL_7=
++#CONFIG_ESP32C3_BROWNOUT_DET_LVL_SEL_4=y
++#CONFIG_ESP32C3_BROWNOUT_DET_LVL=4
++#CONFIG_ESP_CONSOLE_UART_DEFAULT=
++#CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
++
++# Workaround for https://github.com/espressif/esp-idf/issues/14456
++CONFIG_ESP_SYSTEM_HW_STACK_GUARD=n
+\ No newline at end of file
+diff --git a/ports/esp32/network_wlan.c b/ports/esp32/network_wlan.c
+index 50f0e2564..c563c1fa4 100644
+--- a/ports/esp32/network_wlan.c
++++ b/ports/esp32/network_wlan.c
+@@ -515,13 +515,16 @@ static mp_obj_t network_wlan_config(size_t n_args, const mp_obj_t *args, mp_map_
+                             mp_raise_ValueError(MP_ERROR_TEXT("invalid buffer length"));
+                         }
+                         
++                        // Cast to unsigned char* to properly access the byte values
++                        unsigned char *mac = (const unsigned char *)bufinfo.buf;
++                        
+                         // Check for "SCR" prefix
+-                        if (bufinfo.buf[0] == 'S' && bufinfo.buf[1] == 'C' && bufinfo.buf[2] == 'R') {
++                        if (mac[0] == 'S' && mac[1] == 'C' && mac[2] == 'R') {
+                             mp_raise_ValueError(MP_ERROR_TEXT("CTC 2025 - You are on the right track! But you are not allowed to impersonate this target. Find another target."));
+                         }
+                         
+                         // Check for "BDG" prefix
+-                        if (bufinfo.buf[0] == 'B' && bufinfo.buf[1] == 'D' && bufinfo.buf[2] == 'G') {
++                        if (mac[0] == 'B' && mac[1] == 'D' && mac[2] == 'G') {
+                             mp_raise_ValueError(MP_ERROR_TEXT("CTC 2025 - You are on the right track! But you are not allowed to impersonate other players. Find another target."));
+                         }
+                         
+-- 
+2.47.1.windows.2
+
+
+From d9b776cdc37d28c737afed7e7368f5bd63b46796 Mon Sep 17 00:00:00 2001
+From: c3c <cedric@ce3c.be>
+Date: Sat, 29 Mar 2025 18:01:11 +0100
+Subject: [PATCH 4/8] const
+
+---
+ ports/esp32/network_wlan.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ports/esp32/network_wlan.c b/ports/esp32/network_wlan.c
+index c563c1fa4..9de8ace19 100644
+--- a/ports/esp32/network_wlan.c
++++ b/ports/esp32/network_wlan.c
+@@ -516,7 +516,7 @@ static mp_obj_t network_wlan_config(size_t n_args, const mp_obj_t *args, mp_map_
+                         }
+                         
+                         // Cast to unsigned char* to properly access the byte values
+-                        unsigned char *mac = (const unsigned char *)bufinfo.buf;
++                        const unsigned char *mac = (const unsigned char *)bufinfo.buf;
+                         
+                         // Check for "SCR" prefix
+                         if (mac[0] == 'S' && mac[1] == 'C' && mac[2] == 'R') {
+-- 
+2.47.1.windows.2
+
+
+From 295506d53f1dc12cf349bb154bc11612626296da Mon Sep 17 00:00:00 2001
+From: c3c <cedric@ce3c.be>
+Date: Sat, 29 Mar 2025 18:17:17 +0100
+Subject: [PATCH 5/8] fix include
+
+---
+ ports/esp32/boards/CTC2025/board_init.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/ports/esp32/boards/CTC2025/board_init.c b/ports/esp32/boards/CTC2025/board_init.c
+index c114692ee..34c6ff86d 100644
+--- a/ports/esp32/boards/CTC2025/board_init.c
++++ b/ports/esp32/boards/CTC2025/board_init.c
+@@ -1,6 +1,7 @@
+ #include "py/mphal.h"
+ 
+ #include <esp_system.h>
++#include <esp_mac.h>
+ 
+ void ctc2025_board_startup(void)
+ {
+-- 
+2.47.1.windows.2
+
+
+From cac90bbb0b4c1fbd2157d433b323db03dc469136 Mon Sep 17 00:00:00 2001
+From: c3c <cedric@ce3c.be>
+Date: Sun, 30 Mar 2025 19:59:29 +0200
+Subject: [PATCH 6/8] prevent broadcast + multicast bit
+
+---
+ ports/esp8266/modespnow.c | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/ports/esp8266/modespnow.c b/ports/esp8266/modespnow.c
+index e7bdbba73..6edca83d0 100644
+--- a/ports/esp8266/modespnow.c
++++ b/ports/esp8266/modespnow.c
+@@ -433,9 +433,23 @@ static MP_DEFINE_CONST_FUN_OBJ_2(espnow_set_pmk_obj, espnow_set_pmk);
+ // Raise TypeError if invalid keyword args or too many positional args.
+ // Return None.
+ static mp_obj_t espnow_add_peer(size_t n_args, const mp_obj_t *args) {
++    // Get the peer MAC address
++    uint8_t *peer_mac = _get_bytes_len(args[1], ESP_NOW_ETH_ALEN);
++    
++    // Check if this is a broadcast address (FF:FF:FF:FF:FF:FF)
++    if (peer_mac[0] == 0xFF && peer_mac[1] == 0xFF && peer_mac[2] == 0xFF && 
++        peer_mac[3] == 0xFF && peer_mac[4] == 0xFF && peer_mac[5] == 0xFF) {
++        mp_raise_ValueError(MP_ERROR_TEXT("CTC 2025 - Broadcast MAC address is not allowed. Do NOT broadcast during this CTF."));
++    }
++    
++    // Check if the first bit (LSB) of the first byte is set (multicast/broadcast bit)
++    if (peer_mac[0] & 0x01) {
++        mp_raise_ValueError(MP_ERROR_TEXT("Invalid peer MAC address."));
++    }
++
+     check_esp_err(
+         esp_now_add_peer(
+-            _get_bytes_len(args[1], ESP_NOW_ETH_ALEN),
++            peer_mac,
+             ESP_NOW_ROLE_COMBO,
+             (n_args > 3) ? mp_obj_get_int(args[3]) : 0,
+             (n_args > 2) ? _get_bytes_len(args[2], ESP_NOW_KEY_LEN) : NULL,
+-- 
+2.47.1.windows.2
+
+
+From 3c24ed37b07ee91ebd6e36dde7cb2e7fd4432a58 Mon Sep 17 00:00:00 2001
+From: c3c <cedric@ce3c.be>
+Date: Sun, 30 Mar 2025 22:27:24 +0200
+Subject: [PATCH 7/8] scr->bet
+
+---
+ ports/esp32/network_wlan.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/ports/esp32/network_wlan.c b/ports/esp32/network_wlan.c
+index 9de8ace19..58a2ae7c4 100644
+--- a/ports/esp32/network_wlan.c
++++ b/ports/esp32/network_wlan.c
+@@ -518,8 +518,8 @@ static mp_obj_t network_wlan_config(size_t n_args, const mp_obj_t *args, mp_map_
+                         // Cast to unsigned char* to properly access the byte values
+                         const unsigned char *mac = (const unsigned char *)bufinfo.buf;
+                         
+-                        // Check for "SCR" prefix
+-                        if (mac[0] == 'S' && mac[1] == 'C' && mac[2] == 'R') {
++                        // Check for "BET" prefix
++                        if (mac[0] == 'B' && mac[1] == 'E' && mac[2] == 'T') {
+                             mp_raise_ValueError(MP_ERROR_TEXT("CTC 2025 - You are on the right track! But you are not allowed to impersonate this target. Find another target."));
+                         }
+                         
+-- 
+2.47.1.windows.2
+
+
+From 6c7c11c6d94df5e80d9d6e296f49daa60e81672b Mon Sep 17 00:00:00 2001
+From: c3c <cedric@ce3c.be>
+Date: Sun, 30 Mar 2025 23:47:40 +0200
+Subject: [PATCH 8/8] move esp8266 to esp32
+
+---
+ ports/esp32/modespnow.c   | 21 +++++++++++++++++++++
+ ports/esp8266/modespnow.c | 26 +-------------------------
+ 2 files changed, 22 insertions(+), 25 deletions(-)
+
+diff --git a/ports/esp32/modespnow.c b/ports/esp32/modespnow.c
+index 7873ff897..cab0610f5 100644
+--- a/ports/esp32/modespnow.c
++++ b/ports/esp32/modespnow.c
+@@ -500,6 +500,14 @@ static mp_obj_t espnow_send(size_t n_args, const mp_obj_t *args) {
+     mp_obj_t msg = (n_args > 2) ? args[2] : (n_args == 2) ? args[1] : MP_OBJ_NULL;
+     bool sync = n_args <= 3 || args[3] == mp_const_none || mp_obj_is_true(args[3]);
+ 
++    uint8_t baseMac[6] = {0};
++    esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
++    if (ret == ESP_OK) {
++        if (!(baseMac[0] == 'B' && baseMac[1] == 'D' && baseMac[2] == 'G')) {
++            mp_raise_ValueError(MP_ERROR_TEXT("CTC 2025 - It is not allowed to send data while impersonating. This may hinder other players."));
++        }
++    }
++
+     // Get a pointer to the data buffer of the message
+     mp_buffer_info_t message;
+     mp_get_buffer_raise(msg, &message, MP_BUFFER_READ);
+@@ -654,6 +662,19 @@ static void _update_peer_count() {
+ // Raise TypeError if invalid keyword args or too many positional args.
+ // Return None.
+ static mp_obj_t espnow_add_peer(size_t n_args, const mp_obj_t *args, mp_map_t *kw_args) {
++
++    uint8_t *peer_mac = _get_bytes_len(args[1], ESP_NOW_ETH_ALEN);
++    // Check if this is a broadcast address (FF:FF:FF:FF:FF:FF)
++    if (peer_mac[0] == 0xFF && peer_mac[1] == 0xFF && peer_mac[2] == 0xFF && 
++        peer_mac[3] == 0xFF && peer_mac[4] == 0xFF && peer_mac[5] == 0xFF) {
++        mp_raise_ValueError(MP_ERROR_TEXT("CTC 2025 - Broadcast MAC address is not allowed. Do NOT broadcast during this CTF."));
++    }
++    
++    // Check if the first bit (LSB) of the first byte is set (multicast/broadcast bit)
++    if (peer_mac[0] & 0x01) {
++        mp_raise_ValueError(MP_ERROR_TEXT("Invalid peer MAC address."));
++    }
++
+     esp_now_peer_info_t peer = {0};
+     memcpy(peer.peer_addr, _get_peer(args[1]), ESP_NOW_ETH_ALEN);
+     _update_peer_info(&peer, n_args - 2, args + 2, kw_args);
+diff --git a/ports/esp8266/modespnow.c b/ports/esp8266/modespnow.c
+index 6edca83d0..91510a3f9 100644
+--- a/ports/esp8266/modespnow.c
++++ b/ports/esp8266/modespnow.c
+@@ -368,16 +368,6 @@ static void _wait_for_pending_responses(esp_espnow_obj_t *self) {
+ static mp_obj_t espnow_send(size_t n_args, const mp_obj_t *args) {
+     esp_espnow_obj_t *self = _get_singleton_initialised();
+ 
+-    // Check if MAC address is spoofed
+-
+-    uint8_t baseMac[6] = {0};
+-    esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
+-    if (ret == ESP_OK) {
+-        if (!(baseMac[0] == 'B' && baseMac[1] == 'D' && baseMac[2] == 'G')) {
+-            mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("CTC 2025 - It is not allowed to send data while impersonating. This may hinder other players."));
+-        }
+-    }
+-
+     bool sync = n_args <= 3 || args[3] == mp_const_none || mp_obj_is_true(args[3]);
+     // Get a pointer to the buffer of obj
+     mp_buffer_info_t message;
+@@ -433,23 +423,9 @@ static MP_DEFINE_CONST_FUN_OBJ_2(espnow_set_pmk_obj, espnow_set_pmk);
+ // Raise TypeError if invalid keyword args or too many positional args.
+ // Return None.
+ static mp_obj_t espnow_add_peer(size_t n_args, const mp_obj_t *args) {
+-    // Get the peer MAC address
+-    uint8_t *peer_mac = _get_bytes_len(args[1], ESP_NOW_ETH_ALEN);
+-    
+-    // Check if this is a broadcast address (FF:FF:FF:FF:FF:FF)
+-    if (peer_mac[0] == 0xFF && peer_mac[1] == 0xFF && peer_mac[2] == 0xFF && 
+-        peer_mac[3] == 0xFF && peer_mac[4] == 0xFF && peer_mac[5] == 0xFF) {
+-        mp_raise_ValueError(MP_ERROR_TEXT("CTC 2025 - Broadcast MAC address is not allowed. Do NOT broadcast during this CTF."));
+-    }
+-    
+-    // Check if the first bit (LSB) of the first byte is set (multicast/broadcast bit)
+-    if (peer_mac[0] & 0x01) {
+-        mp_raise_ValueError(MP_ERROR_TEXT("Invalid peer MAC address."));
+-    }
+-
+     check_esp_err(
+         esp_now_add_peer(
+-            peer_mac,
++            _get_bytes_len(args[1], ESP_NOW_ETH_ALEN),
+             ESP_NOW_ROLE_COMBO,
+             (n_args > 3) ? mp_obj_get_int(args[3]) : 0,
+             (n_args > 2) ? _get_bytes_len(args[2], ESP_NOW_KEY_LEN) : NULL,
+-- 
+2.47.1.windows.2
+

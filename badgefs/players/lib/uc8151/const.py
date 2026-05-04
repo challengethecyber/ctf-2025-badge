@@ -1,0 +1,92 @@
+import micropython
+
+"""
+Flags, LUTs and other values that are used to configure the driver.
+"""
+
+# PSR
+RES_96x230 = micropython.const(0b00000000)
+RES_96x252 = micropython.const(0b01000000)
+RES_128x296 = micropython.const(0b10000000)
+RES_160x296 = micropython.const(0b11000000)
+LUT_OTP = micropython.const(0b00000000)
+LUT_REG = micropython.const(0b00100000)
+FORMAT_BWR = micropython.const(0b00000000)
+FORMAT_BW = micropython.const(0b00010000)
+SCAN_DOWN = micropython.const(0b00000000)
+SCAN_UP = micropython.const(0b00001000)
+SHIFT_LEFT = micropython.const(0b00000000)
+SHIFT_RIGHT = micropython.const(0b00000100)
+BOOSTER_OFF = micropython.const(0b00000000)
+BOOSTER_ON = micropython.const(0b00000010)
+RESET_SOFT = micropython.const(0b00000000)
+RESET_NONE = micropython.const(0b00000001)
+
+# PWR
+VDS_EXTERNAL = micropython.const(0b00000000)
+VDS_INTERNAL = micropython.const(0b00000010)
+VDG_EXTERNAL = micropython.const(0b00000000)
+VDG_INTERNAL = micropython.const(0b00000001)
+VCOM_VD = micropython.const(0b00000000)
+VCOM_VG = micropython.const(0b00000100)
+VGHL_16V = micropython.const(0b00000000)
+VGHL_15V = micropython.const(0b00000001)
+VGHL_14V = micropython.const(0b00000010)
+VGHL_13V = micropython.const(0b00000011)
+
+# BOOSTER
+START_10MS = micropython.const(0b00000000)
+START_20MS = micropython.const(0b01000000)
+START_30MS = micropython.const(0b10000000)
+START_40MS = micropython.const(0b11000000)
+STRENGTH_1 = micropython.const(0b00000000)
+STRENGTH_2 = micropython.const(0b00001000)
+STRENGTH_3 = micropython.const(0b00010000)
+STRENGTH_4 = micropython.const(0b00011000)
+STRENGTH_5 = micropython.const(0b00100000)
+STRENGTH_6 = micropython.const(0b00101000)
+STRENGTH_7 = micropython.const(0b00110000)
+STRENGTH_8 = micropython.const(0b00111000)
+OFF_0_27US = micropython.const(0b00000000)
+OFF_0_34US = micropython.const(0b00000001)
+OFF_0_40US = micropython.const(0b00000010)
+OFF_0_54US = micropython.const(0b00000011)
+OFF_0_80US = micropython.const(0b00000100)
+OFF_1_54US = micropython.const(0b00000101)
+OFF_3_34US = micropython.const(0b00000110)
+OFF_6_58US = micropython.const(0b00000111)
+
+# PFS
+FRAMES_1 = micropython.const(0b00000000)
+FRAMES_2 = micropython.const(0b00010000)
+FRAMES_3 = micropython.const(0b00100000)
+FRAMES_4 = micropython.const(0b00110000)
+
+# TSE
+TEMP_INTERNAL = micropython.const(0b00000000)
+TEMP_EXTERNAL = micropython.const(0b10000000)
+OFFSET_0 = micropython.const(0b00000000)
+OFFSET_1 = micropython.const(0b00000001)
+OFFSET_2 = micropython.const(0b00000010)
+OFFSET_3 = micropython.const(0b00000011)
+OFFSET_4 = micropython.const(0b00000100)
+OFFSET_5 = micropython.const(0b00000101)
+OFFSET_6 = micropython.const(0b00000110)
+OFFSET_7 = micropython.const(0b00000111)
+OFFSET_MIN_8 = micropython.const(0b00001000)
+OFFSET_MIN_7 = micropython.const(0b00001001)
+OFFSET_MIN_6 = micropython.const(0b00001010)
+OFFSET_MIN_5 = micropython.const(0b00001011)
+OFFSET_MIN_4 = micropython.const(0b00001100)
+OFFSET_MIN_3 = micropython.const(0b00001101)
+OFFSET_MIN_2 = micropython.const(0b00001110)
+OFFSET_MIN_1 = micropython.const(0b00001111)
+
+# PLL
+HZ_29 = micropython.const(0b00111111)
+HZ_33 = micropython.const(0b00111110)
+HZ_40 = micropython.const(0b00111101)
+HZ_50 = micropython.const(0b00111100)
+HZ_67 = micropython.const(0b00111011)
+HZ_100 = micropython.const(0b00111010)
+HZ_200 = micropython.const(0b00111001)

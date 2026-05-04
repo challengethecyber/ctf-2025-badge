@@ -1,0 +1,244 @@
+(footprint "LED-SMD_WS2812B-4020"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0 -4 0)
+		(layer "F.SilkS")
+		(uuid "06486d03-d46d-417d-a689-b913d6c60259")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "LED-SMD_WS2812B-4020"
+		(at 0 4 0)
+		(layer "F.Fab")
+		(uuid "effda4d3-c7d7-437e-9e19-4c24f77ae697")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Footprint" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "939389ba-df80-4978-a081-286dc20adbf3")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "92331ce5-748c-4876-8e0c-78588b42d84e")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "2aadef0e-cbbe-4338-a3b9-122b7b2e77d7")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_line
+		(start -2 -1.7)
+		(end 2 -1.7)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "2ab20788-0c96-4251-ac7c-c7e9eb489060")
+	)
+	(fp_line
+		(start -2 -0.9)
+		(end -2 -1.7)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "86a48e72-8109-471e-b9c0-0435ff198e30")
+	)
+	(fp_line
+		(start -1.8 0)
+		(end -2 -0.9)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "a5cd12d9-33f0-4083-bc12-5ab35e151d12")
+	)
+	(fp_line
+		(start -1.67 0)
+		(end -1.8 0)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "f7bb027e-cb81-4e94-9ca3-a40e4d0dea63")
+	)
+	(fp_line
+		(start -0.82 0)
+		(end -0.87 0)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "da48e378-a834-4d0b-8301-c9b9b1c9cb22")
+	)
+	(fp_line
+		(start 0.03 0)
+		(end -0.02 0)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "afe1c1b0-436e-4a9e-8496-20e247a00b57")
+	)
+	(fp_line
+		(start 0.88 0)
+		(end 0.83 0)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "34ba71f4-823b-442b-9116-d7205b802088")
+	)
+	(fp_line
+		(start 1.8 0)
+		(end 1.68 0)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "94dd6134-b904-4186-a162-b34f33a71e77")
+	)
+	(fp_line
+		(start 2 -1.7)
+		(end 2 -0.9)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "cb83fd4e-a1a4-4820-a5e4-7fa3f7bb7367")
+	)
+	(fp_line
+		(start 2 -0.9)
+		(end 1.8 0)
+		(stroke
+			(width 0.18)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "cd017439-0dbf-4b8f-ad86-80a0adad9937")
+	)
+	(fp_circle
+		(center 1.9 0.5)
+		(end 2 0.5)
+		(stroke
+			(width 0.25)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.SilkS")
+		(uuid "91221edb-d9ab-4940-b466-5960c2dd942a")
+	)
+	(fp_circle
+		(center 1.27 0.38)
+		(end 1.42 0.38)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(fill none)
+		(layer "Cmts.User")
+		(uuid "72a2ae52-bd48-46b0-9a78-eb4e8f7d46e0")
+	)
+	(fp_circle
+		(center 1.99 -1.68)
+		(end 2.02 -1.68)
+		(stroke
+			(width 0.06)
+			(type solid)
+		)
+		(fill none)
+		(layer "F.Fab")
+		(uuid "76ca961a-7023-4319-b4f6-85f630126f2c")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "043fce2f-57b0-400f-a3ac-54108b36023f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" smd rect
+		(at 1.27 0)
+		(size 0.42 1.3)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(uuid "26f2f186-7639-46bb-aa0b-5146effa4d4a")
+	)
+	(pad "2" smd rect
+		(at 0.43 0 180)
+		(size 0.42 1.3)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(uuid "349e3096-1c3c-4f78-af5a-726f8766c987")
+	)
+	(pad "3" smd rect
+		(at -0.43 0 180)
+		(size 0.42 1.3)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(uuid "a76c7933-2bff-4029-9d87-1a99fdfe0a72")
+	)
+	(pad "4" smd rect
+		(at -1.27 0 180)
+		(size 0.42 1.3)
+		(layers "F.Cu" "F.Paste" "F.Mask")
+		(uuid "691a50cd-5c08-4545-96fa-86750ea8840a")
+	)
+	(model "/Users/max/Projects/challenges-2025/challenges/ctc2025-badge/hardware/lib/ctc_2025.3dshapes/LED-SMD_WS2812B-4020.wrl"
+		(offset
+			(xyz 2.15 1.7 1.5)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)
